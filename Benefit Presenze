@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        h1 {
+        h1, h2 {
             text-align: center;
         }
         form {
@@ -17,6 +17,7 @@
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            justify-content: center;
         }
         input, button {
             padding: 10px;
@@ -33,12 +34,6 @@
         th, td {
             padding: 10px;
             text-align: left;
-        }
-        .history {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
         }
         .modal {
             position: fixed;
@@ -70,7 +65,17 @@
         }
     </style>
 </head>
-<body>
+<body onload="checkLogin()">
+
+<!-- Schermata di login -->
+<div id="loginScreen" style="text-align:center;">
+    <h2>Accesso Privato</h2>
+    <input type="password" id="passwordInput" placeholder="Inserisci password">
+    <button onclick="login()">Entra</button>
+</div>
+
+<!-- Contenuto principale nascosto finché non si accede -->
+<div id="mainContent" style="display:none;">
     <h1>Registro Presenze</h1>
     
     <!-- Form per aggiungere persone -->
@@ -78,6 +83,141 @@
         <input type="text" id="firstName" placeholder="Nome" required>
         <input type="text" id="lastName" placeholder="Cognome" required>
         <button type="submit">Aggiungi Persona</button>
+    </form>
+    
+    <!-- Tabella presenze -->
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Lezioni Frequentate</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceTable"></tbody>
+    </table>
+
+    <!-- Modale per aggiungere una lezione -->
+    <div class="modal" id="lessonModal">
+        <h2>Aggiungi Lezione</h2>
+        <form id="lessonForm">
+            <label for="lessonDate">Seleziona la data:</label>
+            <input type="date" id="lessonDate" required>
+            <label for="lessonTime">Seleziona l'orario:</label>
+            <input type="time" id="lessonTime" required>
+            <button type="submit">Conferma</button>
+            <button type="button" onclick="closeModal()">Annulla</button>
+        </form>
+    </div>
+    <div class="modal-overlay" id="modalOverlay"></div>
+</div>
+
+<script>
+    const PASSWORD = "tuaPassword123"; // Cambia questa password
+    const maxLessons = 24;
+    const people = JSON.parse(localStorage.getItem('people')) || [];
+
+    const form = document.getElementById('addPersonForm');
+    const tableBody = document.getElementById('attendanceTable');
+    const modal = document.getElementById('lessonModal');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const lessonForm = document.getElementById('lessonForm');
+    const loginScreen = document.getElementById('loginScreen');
+    const mainContent = document.getElementById('mainContent');
+
+    let selectedPersonIndex = null;
+
+    // Login
+    function checkLogin() {
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            loginScreen.style.display = 'none';
+            mainContent.style.display = 'block';
+            loadPeople();
+        }
+    }
+
+    function login() {
+        const inputPassword = document.getElementById('passwordInput').value;
+        if (inputPassword === PASSWORD) {
+            sessionStorage.setItem('loggedIn', 'true');
+            loginScreen.style.display = 'none';
+            mainContent.style.display = 'block';
+            loadPeople();
+        } else {
+            alert("Password errata!");
+        }
+    }
+
+    // Carica i dati iniziali
+    function loadPeople() {
+        tableBody.innerHTML = '';
+        people.forEach((person, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${person.firstName} ${person.lastName}</td>
+                <td>${person.lessons.length}/${maxLessons}</td>
+                <td>
+                    <button onclick="openModal(${index})">Aggiungi Lezione</button>
+                    <button onclick="removePerson(${index})">Rimuovi</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Salva i dati nel localStorage
+    function savePeople() {
+        localStorage.setItem('people', JSON.stringify(people));
+        loadPeople();
+    }
+
+    // Aggiunge una persona
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const firstName = document.getElementById('firstName').value;
+        const lastName = document.getElementById('lastName').value;
+        people.push({ firstName, lastName, lessons: [] });
+        savePeople();
+        form.reset();
+    });
+
+    // Apre la modale per aggiungere una lezione
+    function openModal(index) {
+        selectedPersonIndex = index;
+        modal.classList.add('active');
+        modalOverlay.classList.add('active');
+    }
+
+    // Chiude la modale
+    function closeModal() {
+        modal.classList.remove('active');
+        modalOverlay.classList.remove('active');
+        lessonForm.reset();
+    }
+
+    // Aggiunge una lezione
+    lessonForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const lessonDate = document.getElementById('lessonDate').value;
+        const lessonTime = document.getElementById('lessonTime').value;
+        if (selectedPersonIndex !== null) {
+            people[selectedPersonIndex].lessons.push({ date: lessonDate, time: lessonTime });
+            savePeople();
+            closeModal();
+        }
+    });
+
+    // Rimuove una persona
+    function removePerson(index) {
+        if (confirm('Sei sicuro di voler rimuovere questa persona?')) {
+            people.splice(index, 1);
+            savePeople();
+        }
+    }
+</script>
+</body>
+</html>
+submit">Aggiungi Persona</button>
     </form>
     
     <!-- Tabella presenze -->
