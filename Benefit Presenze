@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Presenze</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        .history {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+        }
+        .modal.active {
+            display: block;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+        .modal-overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Registro Presenze</h1>
+    
+    <!-- Form per aggiungere persone -->
+    <form id="addPersonForm">
+        <input type="text" id="firstName" placeholder="Nome" required>
+        <input type="text" id="lastName" placeholder="Cognome" required>
+        <button type="submit">Aggiungi Persona</button>
+    </form>
+    
+    <!-- Tabella presenze -->
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Lezioni Frequentate</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceTable">
+            <!-- Le persone verranno aggiunte qui -->
+        </tbody>
+    </table>
+
+    <!-- Modale per aggiungere una lezione -->
+    <div class="modal" id="lessonModal">
+        <h2>Aggiungi Lezione</h2>
+        <form id="lessonForm">
+            <label for="lessonDate">Seleziona la data:</label>
+            <input type="date" id="lessonDate" required>
+            <label for="lessonTime">Seleziona l'orario:</label>
+            <input type="time" id="lessonTime" required>
+            <button type="submit">Conferma</button>
+            <button type="button" onclick="closeModal()">Annulla</button>
+        </form>
+    </div>
+    <div class="modal-overlay" id="modalOverlay"></div>
+
+    <script>
+        const maxLessons = 24;
+        const people = JSON.parse(localStorage.getItem('people')) || [];
+
+        const form = document.getElementById('addPersonForm');
+        const tableBody = document.getElementById('attendanceTable');
+        const modal = document.getElementById('lessonModal');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const lessonForm = document.getElementById('lessonForm');
+
+        let selectedPersonIndex = null;
+
+        // Carica i dati iniziali
+        const loadPeople = () => {
+            tableBody.innerHTML = '';
+            people.forEach((person, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${person.firstName} ${person.lastName}</td>
+                    <td>${person.lessons.length}/${maxLessons}</td>
+                    <td>
+                        <button onclick="openModal(${index})">Aggiungi Lezione</button>
+                        <button onclick="removePerson(${index})">Rimuovi</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        };
+
+        // Salva i dati nel localStorage
+        const savePeople = () => {
+            localStorage.setItem('people', JSON.stringify(people));
+            loadPeople();
+        };
+
+        // Aggiunge una persona
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+
+            people.push({ firstName, lastName, lessons: [] });
+            savePeople();
+            form.reset();
+        });
+
+        // Apre la modale per aggiungere una lezione
+        const openModal = (index) => {
+            selectedPersonIndex = index;
+            modal.classList.add('active');
+            modalOverlay.classList.add('active');
+        };
+
+        // Chiude la modale
+        const closeModal = () => {
+            modal.classList.remove('active');
+            modalOverlay.classList.remove('active');
+            lessonForm.reset();
+        };
+
+        // Aggiunge una lezione
+        lessonForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const lessonDate = document.getElementById('lessonDate').value;
+            const lessonTime = document.getElementById('lessonTime').value;
+
+            if (selectedPersonIndex !== null) {
+                people[selectedPersonIndex].lessons.push({ date: lessonDate, time: lessonTime });
+                savePeople();
+                closeModal();
+            }
+        });
+
+        // Rimuove una persona
+        const removePerson = (index) => {
+            if (confirm('Sei sicuro di voler rimuovere questa persona?')) {
+                people.splice(index, 1);
+                savePeople();
+            }
+        };
+
+        // Inizializza la tabella
+        loadPeople();
+    </script>
+</body>
+</html>
